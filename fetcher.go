@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 )
 
 const (
@@ -48,6 +49,10 @@ func FetchOrders() ([]Order, error) {
 	var ordersResp OrdersResponse
 	if err := json.Unmarshal(body, &ordersResp); err != nil {
 		return nil, fmt.Errorf("parsing response: %w", err)
+	}
+
+	if err := os.WriteFile("orders.json", body, 0644); err != nil {
+		return nil, fmt.Errorf("saving orders.json: %w", err)
 	}
 
 	return ordersResp.Orders, nil

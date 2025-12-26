@@ -8,6 +8,7 @@ type Order struct {
 	Side               string `json:"side"`
 	FilledSize         string `json:"filled_size"`
 	AverageFilledPrice string `json:"average_filled_price"`
+	FilledValue        string `json:"filled_value"`
 	TotalFees          string `json:"total_fees"`
 	LastFillTime       string `json:"last_fill_time"`
 	Status             string `json:"status"`

@@ -8,12 +8,12 @@ import (
 )
 
 type FIFOCalculator struct {
-	positions map[string]*PositionQueue
+	positions map[string][]Position
 }
 
 func NewFIFOCalculator() *FIFOCalculator {
 	return &FIFOCalculator{
-		positions: make(map[string]*PositionQueue),
+		positions: make(map[string][]Position),
 	}
 }
 
@@ -39,7 +39,7 @@ func (f *FIFOCalculator) ProcessFills(fills []Fill) ([]Trade, error) {
 
 func (f *FIFOCalculator) processOrder(order Order) (Trade, error) {
 	size := parseFloat(order.FilledSize)
-	price := parseFloat(order.AverageFilledPrice)
+	value := parseFloat(order.FilledValue)
 	fees := parseFloat(order.TotalFees)
 
 	fillTime, err := time.Parse(time.RFC3339, order.LastFillTime)
@@ -52,67 +52,65 @@ func (f *FIFOCalculator) processOrder(order Order) (Trade, error) {
 		ProductID: order.ProductID,
 		Side:      order.Side,
 		Size:      size,
-		Price:     price,
+		Price:     value / size,
 		Fees:      fees,
 		OrderID:   order.OrderID,
 	}
 
 	if order.Side == "BUY" {
 		trade.RealizedPnL = -fees
-		f.addPosition(order.ProductID, size, price, order.OrderID)
+		f.addPosition(order.ProductID, size, value, order.OrderID)
 	} else if order.Side == "SELL" {
-		pnl := f.matchFIFO(order.ProductID, size, price)
+		pnl := f.closePosition(order.ProductID, size, value)
 		trade.RealizedPnL = pnl - fees
 	}
 
 	return trade, nil
 }
 
-func (f *FIFOCalculator) addPosition(productID string, size, price float64, orderID string) {
+func (f *FIFOCalculator) addPosition(productID string, size, value float64, orderID string) {
 	if f.positions[productID] == nil {
-		f.positions[productID] = &PositionQueue{
-			ProductID: productID,
-			Queue:     []Position{},
-		}
+		f.positions[productID] = []Position{}
 	}
 
-	f.positions[productID].Queue = append(f.positions[productID].Queue, Position{
+	avgPrice := value / size
+	f.positions[productID] = append(f.positions[productID], Position{
 		Size:       size,
-		EntryPrice: price,
+		EntryPrice: avgPrice,
 		OrderID:    orderID,
 	})
 }
 
-func (f *FIFOCalculator) matchFIFO(productID string, sellSize, sellPrice float64) float64 {
-	if f.positions[productID] == nil {
-		f.positions[productID] = &PositionQueue{
-			ProductID: productID,
-			Queue:     []Position{},
-		}
+func (f *FIFOCalculator) closePosition(productID string, sellSize, sellValue float64) float64 {
+	if f.positions[productID] == nil || len(f.positions[productID]) == 0 {
+		return 0
 	}
 
-	queue := &f.positions[productID].Queue
+	queue := f.positions[productID]
 	remainingSize := sellSize
+	avgSellPrice := sellValue / sellSize
 	totalPnL := 0.0
 
-	for remainingSize > 0 && len(*queue) > 0 {
-		position := &(*queue)[0]
+	newQueue := []Position{}
+
+	for remainingSize > 0 && len(queue) > 0 {
+		position := queue[0]
+		queue = queue[1:]
 
 		matchSize := min(remainingSize, position.Size)
-		pnl := (sellPrice - position.EntryPrice) * matchSize
+
+		pnl := (avgSellPrice - position.EntryPrice) * matchSize
 		totalPnL += pnl
 
 		position.Size -= matchSize
 		remainingSize -= matchSize
 
-		if position.Size == 0 {
-			*queue = (*queue)[1:]
+		if position.Size > 0 {
+			newQueue = append(newQueue, position)
 		}
 	}
 
-	if remainingSize > 0 {
-		f.addPosition(productID, -remainingSize, sellPrice, "")
-	}
+	f.positions[productID] = append(newQueue, queue...)
 
 	return totalPnL
 }
