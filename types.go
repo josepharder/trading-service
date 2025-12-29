@@ -58,8 +58,6 @@ type Trade struct {
 
 type DayPnL struct {
 	Date       string  `json:"date"`
-	DayOfMonth int     `json:"dayOfMonth"`
-	DayOfWeek  int     `json:"dayOfWeek"`
 	PnL        float64 `json:"pnl"`
 	TradeCount int     `json:"tradeCount"`
 	HasNotes   bool    `json:"hasNotes"`

@@ -83,8 +83,6 @@ func generateDays(start, end time.Time, dailyTrades map[string][]Trade, targetYe
 
 		days = append(days, DayPnL{
 			Date:       dateKey,
-			DayOfMonth: current.Day(),
-			DayOfWeek:  int(current.Weekday()),
 			PnL:        roundToTwoDecimals(pnl),
 			TradeCount: len(trades),
 			HasNotes:   false,
