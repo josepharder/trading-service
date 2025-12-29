@@ -64,7 +64,7 @@ func generateMonthData(year int, month time.Month, dailyTrades map[string][]Trad
 	endDate := getFirstSaturday(lastDay)
 
 	days := generateDays(startDate, endDate, dailyTrades, year, month)
-	weeks := generateWeeks(days)
+	weeks := generateWeeks(days, year, month)
 	monthlyPnL := calculateMonthlyPnL(days, year, month)
 
 	return MonthData{
@@ -115,7 +115,7 @@ func generateDays(start, end time.Time, dailyTrades map[string][]Trade, targetYe
 	return days
 }
 
-func generateWeeks(days []DayPnL) []WeekPnL {
+func generateWeeks(days []DayPnL, targetYear int, targetMonth time.Month) []WeekPnL {
 	if len(days) == 0 {
 		return []WeekPnL{}
 	}
@@ -126,8 +126,12 @@ func generateWeeks(days []DayPnL) []WeekPnL {
 	weekTradeCount := 0
 
 	for i, day := range days {
-		weekPnL += day.PnL
-		weekTradeCount += day.TradeCount
+		dayDate, _ := time.Parse("2006-01-02", day.Date)
+
+		if dayDate.Year() == targetYear && dayDate.Month() == targetMonth {
+			weekPnL += day.PnL
+			weekTradeCount += day.TradeCount
+		}
 
 		if day.DayOfWeek == 6 || i == len(days)-1 {
 			weeks = append(weeks, WeekPnL{
