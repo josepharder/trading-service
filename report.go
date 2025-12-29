@@ -60,34 +60,13 @@ func generateMonthData(year int, month time.Month, dailyTrades map[string][]Trad
 	firstDay := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
 	lastDay := firstDay.AddDate(0, 1, -1)
 
-	startDate := getFirstSunday(firstDay)
-	endDate := getFirstSaturday(lastDay)
-
-	days := generateDays(startDate, endDate, dailyTrades, year, month)
-	weeks := generateWeeks(days, year, month)
-	monthlyPnL := calculateMonthlyPnL(days, year, month)
+	days := generateDays(firstDay, lastDay, dailyTrades, year, month)
 
 	return MonthData{
-		Month:      month.String(),
-		Year:       year,
-		MonthlyPnL: roundToTwoDecimals(monthlyPnL),
-		Days:       days,
-		Weeks:      weeks,
+		Month: month.String(),
+		Year:  year,
+		Days:  days,
 	}
-}
-
-func getFirstSunday(date time.Time) time.Time {
-	for date.Weekday() != time.Sunday {
-		date = date.AddDate(0, 0, -1)
-	}
-	return date
-}
-
-func getFirstSaturday(date time.Time) time.Time {
-	for date.Weekday() != time.Saturday {
-		date = date.AddDate(0, 0, 1)
-	}
-	return date
 }
 
 func generateDays(start, end time.Time, dailyTrades map[string][]Trade, targetYear int, targetMonth time.Month) []DayPnL {
@@ -115,49 +94,6 @@ func generateDays(start, end time.Time, dailyTrades map[string][]Trade, targetYe
 	return days
 }
 
-func generateWeeks(days []DayPnL, targetYear int, targetMonth time.Month) []WeekPnL {
-	if len(days) == 0 {
-		return []WeekPnL{}
-	}
-
-	var weeks []WeekPnL
-	weekNum := 1
-	weekPnL := 0.0
-	weekTradeCount := 0
-
-	for i, day := range days {
-		dayDate, _ := time.Parse("2006-01-02", day.Date)
-
-		if dayDate.Year() == targetYear && dayDate.Month() == targetMonth {
-			weekPnL += day.PnL
-			weekTradeCount += day.TradeCount
-		}
-
-		if day.DayOfWeek == 6 || i == len(days)-1 {
-			weeks = append(weeks, WeekPnL{
-				WeekNumber:     weekNum,
-				WeekPnL:        roundToTwoDecimals(weekPnL),
-				WeekTradeCount: weekTradeCount,
-			})
-			weekNum++
-			weekPnL = 0.0
-			weekTradeCount = 0
-		}
-	}
-
-	return weeks
-}
-
-func calculateMonthlyPnL(days []DayPnL, year int, month time.Month) float64 {
-	total := 0.0
-	for _, day := range days {
-		dayDate, _ := time.Parse("2006-01-02", day.Date)
-		if dayDate.Year() == year && dayDate.Month() == month {
-			total += day.PnL
-		}
-	}
-	return total
-}
 
 func roundToTwoDecimals(value float64) float64 {
 	return float64(int(value*100+0.5)) / 100

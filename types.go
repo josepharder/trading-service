@@ -72,11 +72,9 @@ type WeekPnL struct {
 }
 
 type MonthData struct {
-	Month      string    `json:"month"`
-	Year       int       `json:"year"`
-	MonthlyPnL float64   `json:"monthlyPnL"`
-	Days       []DayPnL  `json:"days"`
-	Weeks      []WeekPnL `json:"weeks"`
+	Month string   `json:"month"`
+	Year  int      `json:"year"`
+	Days  []DayPnL `json:"days"`
 }
 
 type Report map[string]MonthData
